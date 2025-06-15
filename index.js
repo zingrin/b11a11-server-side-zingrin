@@ -1,5 +1,4 @@
 
-console.clear();
 const express = require("express");
 const cors = require("cors");
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
@@ -66,14 +65,28 @@ async function run() {
         res.status(500).json({ message: "Server Error", error: error.message });
       }
     });
+    
     app.get("/courses", async (req, res) => {
-      try {
-        const result = await courseCollection.find().toArray();
-        res.status(200).json(result);
-      } catch (error) {
-        res.status(500).json({ message: "Server Error", error: error.message });
-      }
-    });
+  try {
+    const email = req.query.email;
+    let query = {};
+    if (email) {
+      query = { instructor_email: email };
+    }
+    const result = await courseCollection.find(query).toArray();
+    res.status(200).json(result);
+  } catch (error) {
+    res.status(500).json({ message: "Server Error", error: error.message });
+  }
+});
+
+    // delete course id
+    app.delete("/courses/:id", async (req, res) => {
+  const id = req.params.id;
+  const result = await courseCollection.deleteOne({ _id: new ObjectId(id) });
+  res.send(result);
+});
+
 
     // GET enrollments for a student
     app.get("/enrollments", async (req, res) => {
@@ -90,6 +103,7 @@ async function run() {
         enrollment.instructor = course?.instructor;
         enrollment.image = course?.image;
       }
+      
 
       res.send(enrollments);
     });
