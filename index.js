@@ -101,7 +101,16 @@ async function run() {
       res.send(result);
     });
    
-
+ // DELETE enrollment by ID
+app.delete("/api/my-enrollments/:id", async (req, res) => {
+  const id = req.params.id;
+  try {
+    const result = await enrollmentCollection.deleteOne({ _id: new ObjectId(id) });
+    res.send(result);
+  } catch (err) {
+    res.status(500).json({ message: "Failed to delete enrollment", error: err.message });
+  }
+});
 
     console.log("Connected to MongoDB");
   } catch (error) {
