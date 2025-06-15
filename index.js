@@ -90,28 +90,29 @@ async function run() {
 
     // GET enrollments for a student
     app.get("/enrollments", async (req, res) => {
+      
       const email = req.query.email;
-      const query = { student_email: email };
-      const enrollments = await enrollmentCollection.find(query).toArray();
-
-      // Add course info to each enrollment
-      for (const enrollment of enrollments) {
-        const course = await courseCollection.findOne({
-          _id: new ObjectId(enrollment.courseId),
-        });
-        enrollment.title = course?.title;
-        enrollment.instructor = course?.instructor;
-        enrollment.image = course?.image;
-      }
       
 
-      res.send(enrollments);
+      const requests = await enrollmentCollection
+        .find({userEmail: email })
+        .toArray();
+      res.send(requests);
+      
+
     });
 
     // POST new enrollment
     app.post("/enroll", async (req, res) => {
       const enrollment = req.body;
       const result = await enrollmentCollection.insertOne(enrollment);
+      res.send(result);
+    });
+    // POST addCourse
+    app.post("/courses", async (req, res) => {
+      const post = req.body;
+      
+      const result = await courseCollection.insertOne(post);
       res.send(result);
     });
    
