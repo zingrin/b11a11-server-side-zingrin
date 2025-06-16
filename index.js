@@ -130,7 +130,7 @@ async function run() {
       }
     });
 
-    // GET limited courses (top 6)
+    // GET limited courses 
     app.get("/api/courses", async (req, res) => {
       try {
         const result = await courseCollection.find().toArray();
