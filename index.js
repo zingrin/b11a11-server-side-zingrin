@@ -28,7 +28,9 @@ async function run() {
     const enrollmentCollection = client
       .db("Academix")
       .collection("enrollments");
-const instructorCollection = client.db("Academix").collection("instructors");
+    const instructorCollection = client
+      .db("Academix")
+      .collection("instructors");
     // GET all courses or filter by instructor email
     app.get("/courses", async (req, res) => {
       const email = req.query.email;
@@ -70,7 +72,7 @@ const instructorCollection = client.db("Academix").collection("instructors");
           {
             $group: {
               _id: "$courseId",
-              count: { $sum: 1 }, 
+              count: { $sum: 1 },
             },
           },
           {
@@ -131,7 +133,7 @@ const instructorCollection = client.db("Academix").collection("instructors");
     // GET limited courses (top 6)
     app.get("/api/courses", async (req, res) => {
       try {
-        const result = await courseCollection.find().limit(6).toArray();
+        const result = await courseCollection.find().toArray();
         res.status(200).json(result);
       } catch (error) {
         res.status(500).json({ message: "Server Error", error: error.message });
@@ -161,56 +163,55 @@ const instructorCollection = client.db("Academix").collection("instructors");
       res.send(result);
     });
 
-    
+    app.get("/enrollments", async (req, res) => {
+      const email = req.query.email;
 
+      try {
+        const enrollments = await enrollmentCollection
+          .aggregate([
+            {
+              $match: { userEmail: email },
+            },
+            {
+              $lookup: {
+                from: "course",
+                localField: "courseId",
+                foreignField: "_id",
+                as: "courseData",
+              },
+            },
+            {
+              $unwind: "$courseData",
+            },
+            {
+              $project: {
+                _id: 1,
+                userEmail: 1,
+                courseId: 1,
+                enrolledAt: 1,
+                title: "$courseData.title",
+                image: "$courseData.image",
+                instructorName: "$courseData.instructorName",
+                category: "$courseData.category",
+                level: "$courseData.level",
+                duration: "$courseData.duration",
+                seats: "$courseData.seats",
+                enrolledCount: "$courseData.enrolledCount",
+                shortDescription: "$courseData.shortDescription",
+              },
+            },
+          ])
+          .toArray();
 
-app.get("/enrollments", async (req, res) => {
-  const email = req.query.email;
-
-  try {
-    const enrollments = await enrollmentCollection
-      .aggregate([
-        {
-          $match: { userEmail: email },
-        },
-        {
-          $lookup: {
-            from: "course", 
-            localField: "courseId",
-            foreignField: "_id",
-            as: "courseData",
-          },
-        },
-        {
-          $unwind: "$courseData",
-        },
-        {
-          $project: {
-            _id: 1,
-            userEmail: 1,
-            courseId: 1,
-            enrolledAt: 1,
-            "title": "$courseData.title",
-            "image": "$courseData.image",
-            "instructorName": "$courseData.instructorName",
-            "category": "$courseData.category",
-            "level": "$courseData.level",
-            "duration": "$courseData.duration",
-            "seats": "$courseData.seats",
-            "enrolledCount": "$courseData.enrolledCount",
-            "shortDescription": "$courseData.shortDescription"
-          }
-        }
-      ])
-      .toArray();
-
-    res.send(enrollments);
-  } catch (error) {
-    console.error("Failed to aggregate enrollments with course info:", error);
-    res.status(500).send({ error: "Internal Server Error" });
-  }
-});
-
+        res.send(enrollments);
+      } catch (error) {
+        console.error(
+          "Failed to aggregate enrollments with course info:",
+          error
+        );
+        res.status(500).send({ error: "Internal Server Error" });
+      }
+    });
 
     // POST new enrollment
     app.post("/enroll", async (req, res) => {
@@ -241,16 +242,47 @@ app.get("/enrollments", async (req, res) => {
       }
     });
     // ✅ GET route for instructors
-app.get("/api/instructors", async (req, res) => {
-  try {
-    const instructors = await instructorCollection.find().toArray();
-    res.send(instructors);
-  } catch (err) {
-    console.error("Error fetching instructors:", err);
-    res.status(500).send({ error: "Failed to fetch instructors" });
-  }
-});
+    app.get("/api/instructors", async (req, res) => {
+      try {
+        const instructors = await instructorCollection.find().toArray();
+        res.send(instructors);
+      } catch (err) {
+        console.error("Error fetching instructors:", err);
+        res.status(500).send({ error: "Failed to fetch instructors" });
+      }
+    });
+    // PUT update course by ID
+    app.put("/courses/:id", async (req, res) => {
+      const id = req.params.id;
+      const updatedData = req.body;
 
+      try {
+        const result = await courseCollection.updateOne(
+          { _id: new ObjectId(id) },
+          {
+            $set: {
+              title: updatedData.title,
+
+              detailedDescription: updatedData.detailedDescription,
+              instructorName: updatedData.instructorName,
+              duration: updatedData.duration,
+              image: updatedData.image,
+            },
+          }
+        );
+
+        if (result.modifiedCount === 0) {
+          return res
+            .status(404)
+            .json({ message: "Course not found or no change made." });
+        }
+
+        res.json({ message: "Course updated successfully", result });
+      } catch (error) {
+        console.error("Error updating course:", error);
+        res.status(500).json({ message: "Internal Server Error" });
+      }
+    });
 
     // DELETE a course by ID
     app.delete("/courses/:id", async (req, res) => {
