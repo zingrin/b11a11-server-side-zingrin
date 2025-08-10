@@ -31,13 +31,7 @@ async function run() {
     const instructorCollection = client
       .db("Academix")
       .collection("instructors");
-    // GET all courses or filter by instructor email
-    app.get("/courses", async (req, res) => {
-      const email = req.query.email;
-      const query = { instructor_email: email };
-      const result = await courseCollection.find(query).toArray();
-      res.send(result);
-    });
+   
 
     // GET single course by ID
     app.get("/courseDetails/:id", async (req, res) => {
